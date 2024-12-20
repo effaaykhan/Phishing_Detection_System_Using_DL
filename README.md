@@ -12,3 +12,6 @@ The [Model Training & Evaluation](https://github.com/effaaykhan/Phishing_Detecti
 
 
 The [Index.html](https://github.com/effaaykhan/Phishing_Detection_System_Using_DL/blob/886ba965a4ef133b23af0b1706035328847decdb/Index.html) contains the frontend code for attractive UI. It has embedded CSS and JavaScript codes in it.
+
+
+NOTE: Choose a dataset from kaggle or phishtank and modify [Model Training & Evaluation](https://github.com/effaaykhan/Phishing_Detection_System_Using_DL/blob/886ba965a4ef133b23af0b1706035328847decdb/Model%20Training%20%26%20Evaluation) according to your dataset.
