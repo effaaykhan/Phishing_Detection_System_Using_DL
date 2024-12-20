@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing URL Detection</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        /* Embedded CSS for styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #007BFF;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            background: #f1f1f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .result h2 {
+            color: #28a745;
+        }
+        .result p {
+            margin: 5px 0;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+    </style>
+    <script>
+        // JavaScript for URL validation
+        function validateForm() {
+            const urlField = document.getElementById("url");
+            const errorMsg = document.getElementById("error-msg");
+
+            const urlRegex = /^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w.-]*)*\/?$/;
+            if (!urlRegex.test(urlField.value.trim())) {
+                errorMsg.style.display = "block";
+                return false;
+            } else {
+                errorMsg.style.display = "none";
+                return true;
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Phishing URL Detection</h1>
+        <form method="POST" onsubmit="return validateForm();">
+            <label for="url">Enter URL:</label>
+            <input type="text" id="url" name="url" placeholder="https://example.com" required>
+            <p id="error-msg" class="error">Please enter a valid URL.</p>
+            <button type="submit">Check</button>
+        </form>
+
+        {% if result is not none %}
+        <div class="result">
+            <h2>Result: {{ result }}</h2>
+            <p>Confidence: {{ confidence }}%</p>
+            <p>URL: {{ url }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
