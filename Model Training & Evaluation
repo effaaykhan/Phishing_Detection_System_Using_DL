@@ -1,0 +1,169 @@
+##Import Dataset 
+  from google.colab import files
+  uploaded = files.upload()
+
+## Data Preprocessing
+  import pandas as pd
+  
+  df = pd.read_csv("/content/balanced_urls.csv")
+  
+  
+  df['url'] = df['url'].str.replace(r'\bwww\.', '', regex=True)
+  
+  df.to_csv("/content/cleaned_dataset.csv", index=False)
+  print("URLs cleaned and saved to 'cleaned_dataset.csv'")
+  
+  ## Import required Libraries
+    import pandas as pd
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+  
+  ## Model Training & Evaluation
+  import pandas as pd
+  import numpy as np
+  import seaborn as sns
+  import matplotlib.pyplot as plt
+  from sklearn.model_selection import train_test_split
+  from sklearn.utils.class_weight import compute_class_weight
+  from imblearn.over_sampling import SMOTE
+  from tensorflow.keras.preprocessing.text import Tokenizer
+  from tensorflow.keras.preprocessing.sequence import pad_sequences
+  from tensorflow.keras.models import Model
+  from tensorflow.keras.layers import (
+      Input, Embedding, Conv1D, MaxPooling1D, GlobalMaxPooling1D,
+      Dense, Dropout, BatchNormalization, concatenate
+  )
+  from tensorflow.keras.callbacks import EarlyStopping
+  from sklearn.metrics import (
+      accuracy_score, precision_score, recall_score, f1_score,
+      confusion_matrix, roc_curve, auc
+  )
+  import tensorflow as tf
+  import re
+  from urllib.parse import urlparse
+  
+  df = pd.read_csv('/content/cleaned_dataset.csv')
+  
+  df.rename(columns={'url': 'URLs', 'label': 'Labels', 'result': 'Results'}, inplace=True)
+  
+  print(df.info())
+  print(f"Class distribution:\n{df['Results'].value_counts()}")
+  
+  print(f"Missing values present: {df.isnull().values.any()}")
+  
+  df.hist(bins=50, figsize=(15, 15))
+  plt.show()
+  
+  print(df.describe())
+  
+  def extract_additional_features(df):
+      df['url_length'] = df['URLs'].apply(len)
+  
+      df['dot_count'] = df['URLs'].apply(lambda x: x.count('.'))
+  
+      df['https_present'] = df['URLs'].apply(lambda x: 1 if 'https' in x else 0)
+  
+      df['suspicious_chars'] = df['URLs'].apply(lambda x: len(re.findall(r'[@\-\_]', x)))
+  
+      def contains_ip(url):
+          try:
+              return bool(re.search(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', url))
+          except:
+              return False
+  
+      df['ip_address_present'] = df['URLs'].apply(contains_ip)
+  
+      def extract_domain(url):
+          try:
+              return urlparse(url).netloc
+          except:
+              return ""
+  
+      df['domain'] = df['URLs'].apply(extract_domain)
+  
+      def count_subdomains(domain):
+          return domain.count('.')
+  
+      df['subdomain_count'] = df['domain'].apply(count_subdomains)
+  
+      return df[['url_length', 'dot_count', 'https_present', 'suspicious_chars', 'ip_address_present', 'subdomain_count']]
+  
+  additional_features = extract_additional_features(df)
+  X_additional = additional_features.to_numpy()
+  
+  tokenizer = Tokenizer(char_level=True)
+  tokenizer.fit_on_texts(df['URLs'])
+  sequences = tokenizer.texts_to_sequences(df['URLs'])
+  
+  
+  X_text = pad_sequences(sequences, maxlen=max_len, padding='post')
+  
+  X_combined = np.hstack((X_text, X_additional))
+  y = df['Results'].values
+  
+  smote = SMOTE(random_state=42)
+  X_resampled, y_resampled = smote.fit_resample(X_combined, y)
+  print(f"After SMOTE - Class distribution:\n{pd.Series(y_resampled).value_counts()}")
+  
+  
+  X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+  
+  
+  class_weights = compute_class_weight('balanced', classes=np.unique(y_resampled), y=y_resampled)
+  class_weight_dict = {i: weight for i, weight in enumerate(class_weights)}
+  
+  vocab_size = len(tokenizer.word_index) + 1
+  embedding_dim = 50
+  
+  input_text = Input(shape=(max_len,))
+  embedding_layer = Embedding(input_dim=vocab_size, output_dim=embedding_dim)(input_text)
+  x = Conv1D(128, 5, activation='relu')(embedding_layer)
+  x = BatchNormalization()(x)
+  x = MaxPooling1D(2)(x)
+  x = Dropout(0.5)(x)
+  x = Conv1D(64, 3, activation='relu')(x)
+  x = BatchNormalization()(x)
+  x = GlobalMaxPooling1D()(x)
+  
+  input_additional = Input(shape=(X_additional.shape[1],), dtype=tf.float32)
+  combined = concatenate([x, input_additional])
+  
+  x = Dense(128, activation='relu')(combined)
+  x = Dropout(0.5)(x)
+  output = Dense(1, activation='sigmoid')(x)
+  
+  model = Model(inputs=[input_text, input_additional], outputs=output)
+  model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+  
+  early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+  
+  model.fit(
+      [X_train[:, :max_len], X_train[:, max_len:]], y_train,
+      validation_split=0.2, batch_size=16, epochs=50, verbose=1,
+      class_weight=class_weight_dict, callbacks=[early_stopping]
+  )
+  
+  y_pred_probs = model.predict([X_test[:, :max_len], X_test[:, max_len:]])
+  optimal_threshold = 0.6
+  y_pred = (y_pred_probs > optimal_threshold).astype(int)
+  
+  accuracy = accuracy_score(y_test, y_pred) * 100
+  precision = precision_score(y_test, y_pred) * 100
+  recall = recall_score(y_test, y_pred) * 100
+  f1 = f1_score(y_test, y_pred) * 100
+  
+  conf_matrix = confusion_matrix(y_test, y_pred)
+  
+  print(f"Accuracy: {accuracy:.2f}%")
+  print(f"Precision: {precision:.2f}%")
+  print(f"Recall: {recall:.2f}%")
+  print(f"F1 Score: {f1:.2f}%")
+  print(f"Confusion Matrix:\n{conf_matrix}")
+  
+  model.save("phishing_detection_model.h5")
+  with open("tokenizer.json", "w") as f:
+      f.write(tokenizer.to_json())
+  
+  print("Model training and evaluation complete.")
+
